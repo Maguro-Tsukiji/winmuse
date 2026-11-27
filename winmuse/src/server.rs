@@ -402,10 +402,27 @@ impl CuServer {
                         .get("keys")
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
-                    if keys
+                    // Every alias input.rs maps to the Windows key
+                    // must be blocked, not just "win" — and Ctrl+Esc
+                    // opens the Start menu too.
+                    let parts: Vec<String> = keys
                         .split('+')
-                        .any(|p| p.trim().eq_ignore_ascii_case("win"))
-                    {
+                        .map(|p| p.trim().to_lowercase())
+                        .collect();
+                    let has_win = parts.iter().any(|p| {
+                        matches!(
+                            p.as_str(),
+                            "win" | "windows" | "cmd" | "command" | "meta" | "super"
+                                | "lwin" | "rwin"
+                        )
+                    });
+                    let has_ctrl = parts
+                        .iter()
+                        .any(|p| matches!(p.as_str(), "ctrl" | "control"));
+                    let has_esc = parts
+                        .iter()
+                        .any(|p| matches!(p.as_str(), "esc" | "escape"));
+                    if has_win || (has_ctrl && has_esc) {
                         return Some(
                             "Windows-key shortcuts are blocked in guided mode (block_win_keys)"
                                 .to_string(),
@@ -553,6 +570,13 @@ pub fn tailnet_ipv4() -> Option<String> {
         }
         let mut adapter = buf.as_ptr() as *const IP_ADAPTER_ADDRESSES_LH;
         while !adapter.is_null() {
+            // Skip adapters that are not up: a down virtual NIC or
+            // another CGNAT-facing adapter must not win over the
+            // real Tailscale one.
+            if (*adapter).OperStatus.0 != 1 {
+                adapter = (*adapter).Next;
+                continue;
+            }
             let mut ua = (*adapter).FirstUnicastAddress;
             while !ua.is_null() {
                 let sockaddr = (*ua).Address.lpSockaddr;
@@ -595,6 +619,19 @@ pub fn detect_bind(cfg: &Config) -> (String, u16) {
     (host, port)
 }
 
+/// Constant-time byte comparison for the bearer token, so the
+/// check does not leak how much of a guessed token was right.
+fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
+}
+
 async fn auth(
     axum::extract::State(shared): axum::extract::State<Arc<Shared>>,
     req: axum::http::Request<axum::body::Body>,
@@ -608,7 +645,7 @@ async fn auth(
             .headers()
             .get(axum::http::header::AUTHORIZATION)
             .and_then(|v| v.to_str().ok())
-            == Some(expected.as_str());
+            .map_or(false, |v| ct_eq(v.as_bytes(), expected.as_bytes()));
         if !ok {
             return (
                 axum::http::StatusCode::UNAUTHORIZED,

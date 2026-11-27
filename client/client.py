@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Minimal MCP client for the Computer Use bridge.
+"""Minimal MCP client for the winmuse Computer Use server.
 
-Connects directly to the bridge's Streamable HTTP endpoint
+Connects directly to the server's Streamable HTTP endpoint
 (http://<PC tailnet IP>:18081/mcp) from any machine on the same
-tailnet. No credentials: the bridge binds only to the PC's tailnet
-address, so tailnet membership is the access control.
+tailnet. If the server has an auth_token set, pass --token; the
+server binds to the PC's tailnet address by default, so tailnet
+membership is the first access control.
 
 Configuration (first match wins):
-  --host / --port command-line options
-  CU_BRIDGE_HOST / CU_BRIDGE_PORT environment variables
-  defaults: 127.0.0.1 / 18081 (set CU_BRIDGE_HOST to your PC's
+  --host / --port / --token command-line options
+  WINMUSE_HOST / WINMUSE_PORT / WINMUSE_TOKEN environment
+  variables (the legacy CU_BRIDGE_* names still work)
+  defaults: 127.0.0.1 / 18081 (set WINMUSE_HOST to your PC's
   `tailscale ip -4` address for real use)
 
 Usage:
@@ -153,10 +155,10 @@ class McpClient:
         )
         if "mcp-session-id" in resp_headers:
             self.session_id = resp_headers["mcp-session-id"]
-        if is_notification:
-            return None
         if status >= 400:
             raise RuntimeError(f"HTTP {status}: {body[:500]!r}")
+        if is_notification:
+            return None
         for payload in parse_rpc_payloads(body):
             if payload.get("id") == rpc_id:
                 if "error" in payload:
@@ -207,16 +209,30 @@ def find_judge():
     return candidate if os.path.exists(candidate) else None
 
 
+def _env(*names, default=None):
+    """First set environment variable wins (WINMUSE_* preferred,
+    the legacy CU_BRIDGE_* names still work)."""
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return default
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Computer Use MCP bridge client")
-    parser.add_argument("--host", default=os.environ.get("CU_BRIDGE_HOST", "127.0.0.1"))
+    parser = argparse.ArgumentParser(description="winmuse Computer Use MCP client")
     parser.add_argument(
-        "--port", type=int, default=int(os.environ.get("CU_BRIDGE_PORT", "18081"))
+        "--host", default=_env("WINMUSE_HOST", "CU_BRIDGE_HOST", default="127.0.0.1")
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(_env("WINMUSE_PORT", "CU_BRIDGE_PORT", default="18081")),
     )
     parser.add_argument(
         "--token",
-        default=os.environ.get("CU_BRIDGE_TOKEN"),
-        help="bearer token, when the server has auth_token set (or env CU_BRIDGE_TOKEN)",
+        default=_env("WINMUSE_TOKEN", "CU_BRIDGE_TOKEN"),
+        help="bearer token, when the server has auth_token set (or env WINMUSE_TOKEN)",
     )
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("list-tools")

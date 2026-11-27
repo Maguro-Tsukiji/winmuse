@@ -534,6 +534,11 @@ fn run(shared: Arc<Shared>) {
                 if let Some(lc) = op.last_call {
                     if lc.elapsed().as_secs_f64() > IDLE_TIMEOUT_S {
                         op.active = false;
+                        // The local F9 arm must not survive the
+                        // timeout: the next operation needs a fresh
+                        // local OK, exactly like a fresh start.
+                        op.armed = false;
+                        op.awaiting_arm = false;
                     }
                 }
             }

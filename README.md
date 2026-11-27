@@ -82,7 +82,7 @@ read-only by design. Either:
 - **Settings GUI** — pick a profile, tick the apps the agent may
   control (for `guided`), and save. The resident process picks the
   new config up within seconds, no restart needed.
-- **Config file** — copy `server/config.example.toml` to
+- **Config file** — copy `winmuse/config.example.toml` to
   `%LOCALAPPDATA%\winmuse\config.toml` and edit it. Same hot-reload.
 
 For a personal PC you fully control, `full` is the classic
@@ -114,8 +114,8 @@ python client/client.py --host <tailscale-ip-of-the-pc> --token <token> list-too
 ```
 
 `--host` / `--port` / `--token` can also come from the
-`CU_BRIDGE_HOST` / `CU_BRIDGE_PORT` / `CU_BRIDGE_TOKEN`
-environment variables. Or point any MCP client at
+`WINMUSE_HOST` / `WINMUSE_PORT` / `WINMUSE_TOKEN`
+environment variables (the legacy `CU_BRIDGE_*` names still work). Or point any MCP client at
 `http://<tailscale-ip>:18081/mcp` (Streamable HTTP, protocol
 version 2025-03-26).
 
@@ -149,7 +149,7 @@ An idle operation ends itself after 10 minutes.
 ## Permission profiles
 
 Set in `%LOCALAPPDATA%\winmuse\config.toml` or via the Settings GUI.
-Example: [`server/config.example.toml`](server/config.example.toml).
+Example: [`winmuse/config.example.toml`](winmuse/config.example.toml).
 
 | Profile | Behavior |
 |---|---|
@@ -180,7 +180,8 @@ cancelled. Its menu offers Settings, Start/Stop serving, the audit
 log, the config folder, and Quit. Double-clicking the icon — or
 launching `winmuse.exe` again while it is resident — opens Settings.
 
-`winmuse settings` opens the Settings GUI directly. It edits the
+`winmuse.exe settings` opens the Settings GUI directly (from a
+repo checkout: `.\winmuse\target\release\winmuse.exe settings`). It edits the
 profile, the allowlist (a checklist of *currently running apps* — no
 typing executable names), the safety toggles, the audit log, the
 optional bearer token (with a generator), and the overlay (on/off,
@@ -206,8 +207,12 @@ The key is read from the `TYPESAFE_API_KEY` environment variable or,
 with `--key-stdin`, from one line of stdin. It is never written to
 disk by this code.
 
+The judge needs nothing beyond the Python standard library, with
+one optional extra: if Pillow is installed it also reports the
+box `center` in pixels; without Pillow, `center` is null.
+
 Treat Jev as a **gate** ("worth looking here"), not as click
-coordinates: measured box centers can be off by ~13 px. The judge is
+coordinates: measured box centers can be off by ~10 px. The judge is
 a replaceable component — anything that emits the same JSON shape
 can stand in for it.
 
@@ -223,6 +228,10 @@ can stand in for it.
   address only. Never bind `0.0.0.0`, never port-forward it.
 - `full` profile + no token + a non-tailnet bind is effectively
   remote desktop control for the network. Don't.
+- If no tailnet address exists at startup, the server falls back
+  to `127.0.0.1`. With no `auth_token` set, any local process can
+  then operate the PC without authentication — the server logs a
+  warning when this happens. Set a token on shared PCs.
 - Run it only on a tailnet you trust. Stop the `Winmuse` scheduled
   task (or Quit from the tray) to revoke access.
 - The overlay is a notification, not a security boundary; the
@@ -244,7 +253,8 @@ can stand in for it.
 - **Every action returns `CANCELLED`.** Someone pressed ESC at the
   PC. Start a new operation with `operation_begin` — with the PC
   user's approval.
-- **The Settings window did not appear.** Run `winmuse settings`,
+- **The Settings window did not appear.** Run `winmuse.exe settings`
+  (from a repo checkout: `.\winmuse\target\release\winmuse.exe settings`),
   or launch `winmuse.exe` again while it is resident.
 
 ## Limitations
@@ -262,10 +272,10 @@ can stand in for it.
 ## Repository layout
 
 ```
-winmuse/   the Rust server (tray-resident, MCP over Streamable HTTP)
+winmuse/   the Rust server (tray-resident, MCP over Streamable HTTP) + config example
 client/    dependency-light Python client (stdlib only)
 judge/     optional screenshot judge
-server/    original Python implementation (reference) + config example
+server/    original Python implementation (reference only; see its README)
 scripts/   logon-task install / uninstall / stop (PowerShell)
 ```
 

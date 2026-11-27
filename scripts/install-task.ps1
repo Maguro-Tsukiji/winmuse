@@ -12,7 +12,7 @@ if (-not (Test-Path $ExePath)) { throw "winmuse.exe not found: $ExePath (build i
 $action = New-ScheduledTaskAction -Execute $ExePath
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName "Winmuse" -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
 Write-Host "Task 'Winmuse' registered -> $ExePath"
 Write-Host "It will start at the next logon. To start it now: Start-ScheduledTask -TaskName Winmuse"

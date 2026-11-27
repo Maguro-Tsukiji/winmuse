@@ -13,8 +13,8 @@ use std::sync::{Arc, OnceLock};
 
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, GetDC, ReleaseDC, SelectObject,
-    BITMAPINFO, BITMAPINFOHEADER, DIB_RGB_COLORS, HGDIOBJ,
+    CreateDIBSection, DeleteObject, GetDC, ReleaseDC, BITMAPINFO, BITMAPINFOHEADER,
+    DIB_RGB_COLORS, HGDIOBJ,
 };
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Shell::{
@@ -73,15 +73,36 @@ fn state_color(state: &str, serving: bool) -> (u8, u8, u8) {
 }
 
 fn state_label(state: &str, serving: bool) -> &'static str {
+    let ja = crate::config::os_is_japanese();
     if !serving {
-        "停止中"
+        if ja { "停止中" } else { "Stopped" }
     } else {
-        match state {
-            "operating" => "操作中",
-            "waiting" => "許可待ち",
-            "cancelled" => "キャンセル済み",
-            _ => "待機中",
+        match (state, ja) {
+            ("operating", true) => "操作中",
+            ("operating", false) => "Operating",
+            ("waiting", true) => "許可待ち",
+            ("waiting", false) => "Waiting for OK",
+            ("cancelled", true) => "キャンセル済み",
+            ("cancelled", false) => "Cancelled",
+            (_, true) => "待機中",
+            (_, false) => "Idle",
         }
+    }
+}
+
+fn tip_text(state: &str, serving: bool, profile: &str) -> String {
+    if crate::config::os_is_japanese() {
+        format!(
+            "winmuse — {} ・ 権限: {}",
+            state_label(state, serving),
+            profile
+        )
+    } else {
+        format!(
+            "winmuse — {} - Profile: {}",
+            state_label(state, serving),
+            profile
+        )
     }
 }
 
@@ -168,11 +189,7 @@ fn refresh_icon(hwnd: HWND) {
             return;
         }
         let icon = make_icon(state_color(state, serving));
-        let tip = format!(
-            "winmuse — {} ・ 権限: {}",
-            state_label(state, serving),
-            profile
-        );
+        let tip = tip_text(state, serving, &profile);
         (key, icon, tip)
     };
     let data = notify_data(hwnd, icon, &tip);
@@ -215,12 +232,21 @@ fn show_menu(hwnd: HWND) {
                 windows::core::PCWSTR::from_raw(wide.as_ptr()),
             );
         };
-        item(ID_SETTINGS, "設定を開く…");
-        item(ID_TOGGLE, if running { "サーバーを停止" } else { "サーバーを開始" });
-        item(ID_AUDIT, "監査ログを開く");
-        item(ID_FOLDER, "設定フォルダを開く");
+        let ja = crate::config::os_is_japanese();
+        item(ID_SETTINGS, if ja { "設定を開く…" } else { "Open settings…" });
+        item(
+            ID_TOGGLE,
+            match (running, ja) {
+                (true, true) => "サーバーを停止",
+                (true, false) => "Stop server",
+                (false, true) => "サーバーを開始",
+                (false, false) => "Start server",
+            },
+        );
+        item(ID_AUDIT, if ja { "監査ログを開く" } else { "Open audit log" });
+        item(ID_FOLDER, if ja { "設定フォルダを開く" } else { "Open config folder" });
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, windows::core::PCWSTR::null());
-        item(ID_QUIT, "終了");
+        item(ID_QUIT, if ja { "終了" } else { "Quit" });
         let _ = SetForegroundWindow(hwnd);
         let mut pt = POINT::default();
         let _ = GetCursorPos(&mut pt);
@@ -229,7 +255,7 @@ fn show_menu(hwnd: HWND) {
     }
 }
 
-fn on_command(id: usize) {
+fn on_command(hwnd: HWND, id: usize) {
     match id {
         ID_SETTINGS => launch_settings(),
         ID_TOGGLE => {
@@ -253,7 +279,13 @@ fn on_command(id: usize) {
             let _ = std::process::Command::new("explorer.exe").arg(&dir).spawn();
         }
         ID_QUIT => {
-            // The icon is removed in the thread's exit path.
+            // process::exit skips the message loop's exit path, so
+            // remove the icon here — otherwise a ghost icon stays
+            // in the notification area.
+            let data = notify_data(hwnd, HICON::default(), "");
+            unsafe {
+                let _ = Shell_NotifyIconW(NIM_DELETE, &data);
+            }
             std::process::exit(0);
         }
         _ => {}
@@ -283,7 +315,7 @@ unsafe extern "system" fn wndproc(
             LRESULT(0)
         }
         WM_COMMAND => {
-            on_command(wparam.0 & 0xFFFF);
+            on_command(hwnd, wparam.0 & 0xFFFF);
             LRESULT(0)
         }
         WM_DESTROY => {
@@ -338,11 +370,7 @@ pub fn spawn(shared: Arc<Shared>) {
             let state = op_state_name(&c.shared);
             let profile = c.shared.config.read().unwrap().profile.as_str().to_string();
             let icon = make_icon(state_color(state, serving));
-            let tip = format!(
-                "winmuse — {} ・ 権限: {}",
-                state_label(state, serving),
-                profile
-            );
+            let tip = tip_text(state, serving, &profile);
             (icon, tip)
         };
         {

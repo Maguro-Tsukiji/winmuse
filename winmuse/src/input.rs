@@ -62,10 +62,20 @@ fn key_input(vk: VIRTUAL_KEY, up: bool) -> INPUT {
 }
 
 /// Convert real pixel coordinates to SendInput's 0..=65535 absolute space.
+/// Computed in i64 and clamped: an out-of-range coordinate from a
+/// client must not overflow or wrap.
 fn to_abs(x: i32, y: i32) -> (i32, i32) {
     let (w, h) = screen_size();
-    let nx = if w > 1 { x * 65535 / (w - 1) } else { 0 };
-    let ny = if h > 1 { y * 65535 / (h - 1) } else { 0 };
+    let nx = if w > 1 {
+        ((x as i64 * 65535) / (w as i64 - 1)).clamp(0, 65535) as i32
+    } else {
+        0
+    };
+    let ny = if h > 1 {
+        ((y as i64 * 65535) / (h as i64 - 1)).clamp(0, 65535) as i32
+    } else {
+        0
+    };
     (nx, ny)
 }
 
@@ -90,7 +100,7 @@ pub fn click(x: i32, y: i32, button: &str, clicks: i64) -> Result<(), String> {
     move_to(x, y)?;
     let down = button_flags(button, true)?;
     let up = button_flags(button, false)?;
-    for _ in 0..clicks.max(1) {
+    for _ in 0..clicks.clamp(1, 10) {
         send(&[mouse_input(0, 0, 0, down)])?;
         sleep(Duration::from_millis(30));
         send(&[mouse_input(0, 0, 0, up)])?;
@@ -100,13 +110,14 @@ pub fn click(x: i32, y: i32, button: &str, clicks: i64) -> Result<(), String> {
 }
 
 pub fn drag(x1: i32, y1: i32, x2: i32, y2: i32, duration_s: f64) -> Result<(), String> {
+    let duration_s = duration_s.clamp(0.0, 30.0);
     move_to(x1, y1)?;
     send(&[mouse_input(0, 0, 0, MOUSEEVENTF_LEFTDOWN)])?;
     let steps = 20;
-    let step_ms = ((duration_s.max(0.0) * 1000.0) / steps as f64) as u64;
+    let step_ms = ((duration_s * 1000.0) / steps as f64) as u64;
     for i in 1..=steps {
-        let x = x1 + (x2 - x1) * i / steps;
-        let y = y1 + (y2 - y1) * i / steps;
+        let x = (x1 as i64 + (x2 as i64 - x1 as i64) * i as i64 / steps as i64) as i32;
+        let y = (y1 as i64 + (y2 as i64 - y1 as i64) * i as i64 / steps as i64) as i32;
         move_to(x, y)?;
         if step_ms > 0 {
             sleep(Duration::from_millis(step_ms));
@@ -120,7 +131,7 @@ pub fn scroll(amount: i64, at: Option<(i32, i32)>) -> Result<(), String> {
         move_to(x, y)?;
     }
     // WHEEL_DELTA (120) per notch; positive = up, matching pyautogui.
-    let data = (amount * 120) as u32;
+    let data = (amount.clamp(-1000, 1000) * 120) as u32;
     send(&[mouse_input(0, 0, data, MOUSEEVENTF_WHEEL)])
 }
 

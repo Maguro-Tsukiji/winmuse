@@ -5,7 +5,7 @@
 //! `profile` means the server runs in `observe` and says so. The
 //! file is watched by mtime and hot-reloaded; an invalid edit is
 //! rejected and the previous configuration stays in force.
-//! See docs/permissions-design.md.
+//! See the "Permission profiles" section of the README.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -246,7 +246,26 @@ pub fn load(path: &PathBuf) -> Result<Config, String> {
 /// Serialize a Config back to TOML (used by the settings GUI).
 /// Fields the GUI does not edit are written back unchanged.
 pub fn save(path: &PathBuf, cfg: &Config) -> std::io::Result<()> {
-    let esc = |s: &str| s.replace('\\', "\\\\").replace('"', "\\\"");
+    // Full TOML basic-string escaping: a value containing a
+    // newline or other control character (a pasted token, a custom
+    // toast) must still serialize to valid TOML.
+    let esc = |s: &str| {
+        let mut out = String::with_capacity(s.len());
+        for c in s.chars() {
+            match c {
+                '\\' => out.push_str("\\\\"),
+                '"' => out.push_str("\\\""),
+                '\n' => out.push_str("\\n"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                c if (c as u32) < 0x20 => {
+                    out.push_str(&format!("\\u{:04X}", c as u32));
+                }
+                c => out.push(c),
+            }
+        }
+        out
+    };
     let mut out = String::new();
     out.push_str("# winmuse configuration\n");
     out.push_str("# Written by the settings GUI; the resident process hot-reloads this file.\n\n");

@@ -22,6 +22,8 @@ captures stay clean.
 import ctypes
 import io
 import json
+import os
+import tempfile
 import threading
 import time
 
@@ -160,7 +162,7 @@ def _render_overlay_bitmap(mode, w, h):
     d.text((tx, y0 + 56), sub, font=f_sub, fill=(203, 213, 225, 255))
 
     try:
-        img.save(rf"D:\Temp\cu-overlay-preview-{mode}.png")
+        img.save(os.path.join(tempfile.gettempdir(), f"cu-overlay-preview-{mode}.png"))
     except Exception:
         pass
     return img

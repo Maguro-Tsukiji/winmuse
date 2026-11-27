@@ -102,6 +102,15 @@ async fn supervise(shared: Arc<state::Shared>) {
             (true, false) => {
                 let cfg = shared.config.read().unwrap().clone();
                 let (host, port) = server::detect_bind(&cfg);
+                if host == "127.0.0.1"
+                    && cfg.auth_token.as_deref().unwrap_or("").is_empty()
+                {
+                    tracing::warn!(
+                        "serving on loopback with no auth_token: any local process can \
+                         operate this PC without authentication. Set auth_token in the \
+                         config to require a bearer token."
+                    );
+                }
                 match tokio::net::TcpListener::bind(format!("{host}:{port}")).await {
                     Ok(listener) => {
                         let app = server::build_router(shared.clone(), &host, port);

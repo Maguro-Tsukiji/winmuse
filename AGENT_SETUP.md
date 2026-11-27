@@ -41,8 +41,12 @@ questions in plain language, in one short message:
      (profile `observe`).
 2. **If guided:** which apps? List what is currently running —
    `Get-Process | Where-Object MainWindowTitle | Select-Object
-   ProcessName, MainWindowTitle` — and let the user pick from real
-   names. Warn once if they include a terminal, Explorer, or a
+   @{Name='Process'; Expression={$_.ProcessName + '.exe'}},
+   MainWindowTitle` — and let the user pick from real
+   names. The `.exe` suffix matters: the allowlist matches the
+   full executable name (`chrome.exe`), so a bare `chrome` would
+   match nothing and guided mode would refuse everything. Warn
+   once if they include a terminal, Explorer, or a
    password manager: input there can reach local files.
 3. **Access token?** If the tailnet is shared with other people,
    recommend yes; on a single-user tailnet, optional. If yes,
@@ -133,6 +137,6 @@ just launch `winmuse\target\release\winmuse.exe`.
    user** as proof, then `operation_end`.
 4. Report in a few lines: the endpoint address, the profile you
    set, whether a token is in use, and how to change things later
-   (run `winmuse settings`, or edit the config — it hot-reloads)
+   (run `winmuse.exe settings`, or edit the config — it hot-reloads)
    and how to stop it (`scripts\stop-winmuse.ps1`, or
    `scripts\uninstall-task.ps1` to remove the logon task).
