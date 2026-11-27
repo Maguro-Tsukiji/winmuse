@@ -57,7 +57,6 @@ struct Txt {
     audit_open: &'static str,
     audit_path_prefix: &'static str,
     bridge_heading: &'static str,
-    endpoint_prefix: &'static str,
     token_label: &'static str,
     token_gen: &'static str,
     token_clear: &'static str,
@@ -101,7 +100,6 @@ const JA: Txt = Txt {
     audit_open: "監査ログを開く",
     audit_path_prefix: "保存先: ",
     bridge_heading: "ブリッジ",
-    endpoint_prefix: "接続先: ",
     token_label: "Bearer トークン:",
     token_gen: "生成",
     token_clear: "クリア",
@@ -145,7 +143,6 @@ const EN: Txt = Txt {
     audit_open: "Open audit log",
     audit_path_prefix: "Location: ",
     bridge_heading: "Bridge",
-    endpoint_prefix: "Endpoint: ",
     token_label: "Bearer token:",
     token_gen: "Generate",
     token_clear: "Clear",
@@ -154,7 +151,7 @@ const EN: Txt = Txt {
     overlay_heading: "Overlay",
     overlay_enable: "Show the operation overlay (glow frame + toast)",
     toast_lang_label: "Toast language",
-    toast_lang_opts: ["Auto (OS language)", "日本語", "English"],
+    toast_lang_opts: ["Auto (OS language)", "Japanese", "English"],
     toast_title: "Toast title (operating):",
     toast_sub: "Toast subtitle (operating):",
     toast_note: "Leave title/subtitle empty to use the language preset.",
@@ -461,7 +458,6 @@ impl eframe::App for SettingsApp {
 
                 ui.add_space(10.0);
                 ui.heading(t.bridge_heading);
-                ui.label(format!("{}{}", t.endpoint_prefix, self.status));
                 ui.horizontal(|ui| {
                     ui.label(t.token_label);
                     ui.add(egui::TextEdit::singleline(&mut self.token).password(true).desired_width(260.0));

@@ -15,14 +15,17 @@ profile = "guided"
 
 # Optional bearer token. When set, clients must send
 # "Authorization: Bearer <token>" (client.py: --token or the
-# CU_BRIDGE_TOKEN environment variable). When unset, tailnet
+# WINMUSE_TOKEN environment variable; the legacy CU_BRIDGE_TOKEN
+# also works). When unset, tailnet
 # membership is the only access control. The Settings GUI can
 # generate one for you.
 # auth_token = "<random hex>"
 
 [guided]
-# Process names (as shown by Get-Process / Task Manager) that input
-# may land in. Pointer input is checked against the window under the
+# Process names, with the .exe extension (as shown by Task
+# Manager; note PowerShell's Get-Process shows the name WITHOUT
+# .exe, so append it — a bare "chrome" matches nothing) that
+# input may land in. Pointer input is checked against the window under the
 # target point; keyboard input against the foreground window.
 # Terminals, Explorer and password managers do NOT belong here
 # unless you accept that the agent can reach local files through
