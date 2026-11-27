@@ -48,6 +48,14 @@ questions in plain language, in one short message:
    recommend yes; on a single-user tailnet, optional. If yes,
    generate one (step 3) — never ask the user to invent one.
 4. **Start automatically at logon?** (installs a scheduled task)
+5. **Use the Jev screenshot judge?** An optional client-side
+   helper that pre-screens a screenshot with an external judgment
+   model (TypeSafe AI "System One") — "is this target on screen?"
+   — before the agent acts. It is a gate, never a click
+   coordinate. Two things the user must understand before saying
+   yes: judging **sends the screenshot to api.typesafe.ai**, and
+   it needs a **TypeSafe API key** (from console.typesafe.ai).
+   Default is no; it can be enabled later at any time.
 
 If a config already exists at `%LOCALAPPDATA%\winmuse\config.toml`,
 do not overwrite it silently: tell the user the current profile and
@@ -83,6 +91,23 @@ $b = New-Object byte[] 16
 [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
 [BitConverter]::ToString($b).Replace('-', '').ToLower()
 ```
+
+### If the user chose Jev
+
+Jev is configured on the **agent machine**, not on the PC — there
+is no server setting for it.
+
+- The judge runs as `judge/judge.py`, or through the client:
+  `client.py screenshot --judge "<target>"`.
+- It reads its API key from the `TYPESAFE_API_KEY` environment
+  variable on the agent machine, or per call via `--key-stdin`.
+  Have the user supply the key through whatever secret mechanism
+  their agent platform provides and set the environment variable
+  there. **Never write the key to a file** — not into
+  `config.toml`, not into this repository, not into a script.
+- If the user has no TypeSafe key yet, point them at
+  console.typesafe.ai and leave Jev off until they have one;
+  winmuse works fully without it.
 
 ## 4. Start it
 
