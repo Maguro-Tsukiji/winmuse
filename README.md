@@ -45,27 +45,60 @@ included.
 
 ## Quick start
 
+### Prerequisites
+
+- A **Windows 10 or 11** PC (the machine being driven). winmuse only
+  runs on Windows.
+- **Rust** on that PC — install via [rustup](https://rustup.rs/)
+  (the default MSVC toolchain is fine).
+- **Tailscale** installed and signed in on both the PC and the
+  agent machine, on the same tailnet.
+- **Python 3** on the agent machine (for the bundled client;
+  standard library only). Any other MCP client works too.
+
+### 1. Build and first run (on the PC)
+
 ```powershell
 cd winmuse
 cargo build --release
 .\target\release\winmuse.exe
 ```
 
-On first run (no config yet) the Settings window opens automatically
-and the server starts in `observe`. Pick a profile, tick the apps the
-agent may control, and save — the resident process picks the new
-config up within seconds, no restart needed.
+The first build downloads dependencies and can take several
+minutes. On first run (no config yet) the Settings window opens
+automatically and the server starts in `observe`.
 
-To start winmuse automatically at logon:
+### 2. Choose a profile
+
+Nothing can be *operated* until you pick a profile — `observe` is
+read-only by design. Either:
+
+- **Settings GUI** — pick a profile, tick the apps the agent may
+  control (for `guided`), and save. The resident process picks the
+  new config up within seconds, no restart needed.
+- **Config file** — copy `server/config.example.toml` to
+  `%LOCALAPPDATA%\winmuse\config.toml` and edit it. Same hot-reload.
+
+For a personal PC you fully control, `full` is the classic
+behavior; `guided` with your browser ticked is the safer default.
+See [Permission profiles](#permission-profiles) below.
+
+### 3. Start automatically at logon (optional)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\install-task.ps1
+Start-ScheduledTask -TaskName Winmuse   # to start it right away
 ```
 
 The task matters: winmuse must run in your **interactive session**.
-A session-0 service cannot see or drive the desktop.
+A session-0 service cannot see or drive the desktop. To remove it
+later: `scripts\uninstall-task.ps1`.
 
-From the agent machine (Python 3, standard library only):
+### 4. Connect from the agent machine
+
+Find the PC's tailnet address on the PC with `tailscale ip -4`
+(it is also the `addr` field in `%LOCALAPPDATA%\winmuse\status.json`
+on the PC). Then:
 
 ```bash
 python client/client.py --host <tailscale-ip-of-the-pc> list-tools
@@ -74,8 +107,11 @@ python client/client.py --host <tailscale-ip-of-the-pc> screenshot --out shot.pn
 python client/client.py --host <tailscale-ip-of-the-pc> --token <token> list-tools
 ```
 
-Or point any MCP client at `http://<tailscale-ip>:18081/mcp`
-(Streamable HTTP, protocol version 2025-03-26).
+`--host` / `--port` / `--token` can also come from the
+`CU_BRIDGE_HOST` / `CU_BRIDGE_PORT` / `CU_BRIDGE_TOKEN`
+environment variables. Or point any MCP client at
+`http://<tailscale-ip>:18081/mcp` (Streamable HTTP, protocol
+version 2025-03-26).
 
 ## Tools (13)
 
@@ -185,6 +221,25 @@ can stand in for it.
   task (or Quit from the tray) to revoke access.
 - The overlay is a notification, not a security boundary; the
   profile checks and the ESC cancel are the enforcement.
+
+## Troubleshooting
+
+- **The client cannot connect.** On the PC, check the `addr` field
+  of `%LOCALAPPDATA%\winmuse\status.json`. If it says `127.0.0.1`,
+  no tailnet address was found when winmuse started (Tailscale was
+  down) and it fell back to loopback, which no other machine can
+  reach — start Tailscale and restart winmuse, or pin the address
+  with `[server] host` in the config. Also make sure no other
+  program is holding port 18081.
+- **Every action returns `REFUSED`.** The active profile is
+  `observe`, or (in `guided`) the target app is not on the
+  allowlist. `operation_status` reports the live profile and
+  allowlist.
+- **Every action returns `CANCELLED`.** Someone pressed ESC at the
+  PC. Start a new operation with `operation_begin` — with the PC
+  user's approval.
+- **The Settings window did not appear.** Run `winmuse settings`,
+  or launch `winmuse.exe` again while it is resident.
 
 ## Limitations
 

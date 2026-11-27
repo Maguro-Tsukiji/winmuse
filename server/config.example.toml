@@ -13,6 +13,13 @@
 #   full     no allowlist checks (today's behavior)
 profile = "guided"
 
+# Optional bearer token. When set, clients must send
+# "Authorization: Bearer <token>" (client.py: --token or the
+# CU_BRIDGE_TOKEN environment variable). When unset, tailnet
+# membership is the only access control. The Settings GUI can
+# generate one for you.
+# auth_token = "<random hex>"
+
 [guided]
 # Process names (as shown by Get-Process / Task Manager) that input
 # may land in. Pointer input is checked against the window under the
@@ -37,3 +44,20 @@ require_local_arm = false
 # Append-only JSONL log of every tool call and its decision.
 # Location: %LOCALAPPDATA%\winmuse\audit.jsonl — never in temp.
 enabled = true
+
+[server]
+# Bind address and port. Default: the machine's Tailscale address
+# (100.64.0.0/10) on port 18081, falling back to 127.0.0.1 when no
+# tailnet address exists. The WINMUSE_HOST / WINMUSE_PORT
+# environment variables override these.
+# host = "100.x.x.x"
+# port = 18081
+
+[overlay]
+# The operation overlay (glow frame + toast).
+enabled = true
+# Toast language: "" (follow the OS), "ja", or "en".
+lang = ""
+# Custom toast text for the active state; empty = built-in wording.
+# title = ""
+# sub = ""
