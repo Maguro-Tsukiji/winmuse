@@ -1,0 +1,42 @@
+[package]
+name = "winmuse"
+version = "1.0.0"
+edition = "2021"
+description = "Computer Use for Windows, over Tailscale: an MCP server that lets an AI agent on another machine see and operate this Windows PC's desktop."
+license = "MIT"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = "0.8"
+rmcp = { version = "3.11", features = ["server", "transport-streamable-http-server"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+sha2 = "0.10"
+image = { version = "0.25", default-features = false, features = ["png"] }
+base64 = "0.22"
+arboard = "3"
+eframe = { version = "0.31", default-features = false, features = ["glow", "default_fonts"] }
+rand = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
+    "Win32_System_Threading",
+    "Win32_System_LibraryLoader",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_Networking_WinSock",
+    "Win32_Globalization",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Security",
+] }
+
+[profile.release]
+opt-level = 3

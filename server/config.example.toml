@@ -1,0 +1,39 @@
+# winmuse server configuration — example
+#
+# Copy to:  %LOCALAPPDATA%\winmuse\config.toml
+# (override the location with the WINMUSE_CONFIG environment variable)
+#
+# There is NO default profile. If this file is missing or `profile`
+# is unset, the server starts in `observe` (read-only) and says so.
+
+# Choose exactly one:  observe | guided | full
+#
+#   observe  screenshots and window listing only; all input refused
+#   guided   input allowed only into the apps listed below
+#   full     no allowlist checks (today's behavior)
+profile = "guided"
+
+[guided]
+# Process names (as shown by Get-Process / Task Manager) that input
+# may land in. Pointer input is checked against the window under the
+# target point; keyboard input against the foreground window.
+# Terminals, Explorer and password managers do NOT belong here
+# unless you accept that the agent can reach local files through
+# them.
+allow_processes = [
+    "chrome.exe",
+    # "Code.exe",
+]
+
+# Block Windows-key shortcuts (Win+R, Win+E, ...) in guided mode.
+block_win_keys = true
+
+[consent]
+# If true, operation_begin waits for the PC's user to press F9
+# (ESC denies) before any input is accepted.
+require_local_arm = false
+
+[audit]
+# Append-only JSONL log of every tool call and its decision.
+# Location: %LOCALAPPDATA%\winmuse\audit.jsonl — never in temp.
+enabled = true

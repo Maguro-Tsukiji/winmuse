@@ -1,0 +1,13 @@
+# Server-side Python packages. The launcher (start-bridge.cmd) pulls
+# these in automatically via `uv run --with ...`, so this file is only
+# needed if you prefer a plain venv/pip setup.
+fastmcp
+pyautogui
+mss
+pywin32
+pillow
+
+# Bridge (serves the stdio MCP server as Streamable HTTP) and the uv
+# package runner are separate tools, installed once:
+#   pip install mcp-proxy
+#   https://docs.astral.sh/uv/  (uv installer)
