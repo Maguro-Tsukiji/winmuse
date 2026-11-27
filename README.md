@@ -45,6 +45,12 @@ included.
 
 ## Quick start
 
+> **Installing with an AI agent?** Point it at
+> [`AGENT_SETUP.md`](AGENT_SETUP.md). It will check the
+> prerequisites, build, interview you about the initial settings
+> (profile, allowed apps, token, autostart), write the config, and
+> verify the install — you only answer the questions.
+
 ### Prerequisites
 
 - A **Windows 10 or 11** PC (the machine being driven). winmuse only
