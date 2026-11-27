@@ -236,6 +236,8 @@ can stand in for it.
   task (or Quit from the tray) to revoke access.
 - The overlay is a notification, not a security boundary; the
   profile checks and the ESC cancel are the enforcement.
+- Found a security problem? See [SECURITY.md](SECURITY.md) for
+  how to report it privately.
 
 ## Troubleshooting
 

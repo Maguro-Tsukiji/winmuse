@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build (release)
+        working-directory: winmuse
+        run: cargo build --release
+      - name: Python syntax check
+        shell: bash
+        run: python -m py_compile client/client.py judge/judge.py server/server.py
